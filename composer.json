@@ -1,0 +1,23 @@
+{
+    "name": "chapter-three/local-dev",
+    "version": "0.0.1",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Brian Fisher",
+            "email": "tbfisher@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=5.4.0",
+        "symfony/console": "~2.7",
+        "symfony/process": "~2.7",
+        "phpseclib/phpseclib": "~2.0",
+        "symfony/yaml": "~2.7"
+    },
+    "autoload": {
+        "psr-4": {
+            "ChapterThree\\LocalDev\\": "src/"
+        }
+    }
+}

@@ -1,0 +1,26 @@
+#!/usr/bin/env php
+<?php
+
+/**
+ * @file
+ * Main application file.
+ */
+
+require __DIR__ . '/vendor/autoload.php';
+
+use ChapterThree\LocalDev\Conf;
+use ChapterThree\LocalDev\Console\Command;
+use Symfony\Component\Console\Application;
+
+$application = new Application('local.dev Tool', Conf::VERSION);
+
+$conf = Conf::load();
+
+$application->add(new Command\ComposeDestroyCommand($conf));
+$application->add(new Command\ComposeInitCommand());
+$application->add(new Command\ComposeLsCommand($conf));
+$application->add(new Command\ComposePsCommand($conf));
+$application->add(new Command\ComposeStopCommand($conf));
+$application->add(new Command\ComposeUpCommand($conf));
+$application->add(new Command\DrushAliasesCommand($conf));
+$application->run();
