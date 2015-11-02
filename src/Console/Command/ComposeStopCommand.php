@@ -23,7 +23,7 @@ class ComposeStopCommand extends BaseCommand {
 
     parent::configure();
     $this
-      ->setName('compose:stop')
+      ->setName('stop')
       ->setDescription('Stop a development environment.')
       ->addArgument(
           'environment',

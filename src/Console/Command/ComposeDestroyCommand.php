@@ -24,7 +24,7 @@ class ComposeDestroyCommand extends BaseCommand {
 
     parent::configure();
     $this
-      ->setName('compose:destroy')
+      ->setName('destroy')
       ->setDescription('Destroy a development environment.')
       ->addArgument(
         'environment',

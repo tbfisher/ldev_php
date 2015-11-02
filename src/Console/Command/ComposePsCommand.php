@@ -23,7 +23,7 @@ class ComposePsCommand extends BaseCommand {
 
     parent::configure();
     $this
-      ->setName('compose:ps')
+      ->setName('ps')
       ->setDescription('List the containers for a development environment.')
       ->addArgument(
           'environment',

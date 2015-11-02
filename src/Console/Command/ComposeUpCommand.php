@@ -23,7 +23,7 @@ class ComposeUpCommand extends BaseCommand {
 
     parent::configure();
     $this
-      ->setName('compose:up')
+      ->setName('up')
       ->setDescription('Start up a development environment.')
       ->addArgument(
           'environment',
