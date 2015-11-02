@@ -51,10 +51,7 @@ class ComposeDestroyCommand extends BaseCommand {
       '/provision/docker/compose/' .
       $input->getArgument('environment');
 
-    $cmd = "cd {$dir} && docker-compose stop";
-    $this->exec($input, $output, $cmd, TRUE);
-
-    $cmd = "cd {$dir} && docker-compose rm -f";
+    $cmd = "cd {$dir} && docker-compose stop && docker-compose rm -f";
     $this->exec($input, $output, $cmd, TRUE);
 
   }
