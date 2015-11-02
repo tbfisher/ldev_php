@@ -63,8 +63,11 @@ EOD;
     $aliases = [];
 
     // Parse `docker ps` output.
-    list($ps,,) = $this->exec($input, $output,
+    list($ps,, $exit_status) = $this->exec($input, $output,
       "docker ps --format='{{.Names}}  {{.Ports}}'");
+    if ($exit_status) {
+      throw new \Exception('`docker ps` error: ' . $ps);
+    }
     $ps = trim($ps);
     if (!empty($ps)) {
       // Each container.

@@ -281,9 +281,6 @@ abstract class BaseCommand extends Command {
       }
       $status = $this->ssh->getExitStatus();
       $timeout = $this->ssh->isTimeout();
-      if ($timeout) {
-        throw new \Exception('Command timed out.');
-      }
     }
 
     // Local.
@@ -293,10 +290,6 @@ abstract class BaseCommand extends Command {
       if ($print) {
         $output->write($out);
       }
-    }
-
-    if ($status != 0) {
-      throw new \Exception('Non-zero status returned for: ' . $cmd);
     }
 
     return [$out, $timeout, $status];
