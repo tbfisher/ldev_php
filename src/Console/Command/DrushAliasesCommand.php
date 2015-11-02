@@ -80,8 +80,34 @@ EOD;
           $build .= '.' . $index;
         }
 
+        if (!isset($aliases[$build])) {
+          $yaml = new Parser();
+          $dir = $this->getRootDirectory($input) .
+            '/provision/docker/compose/' .
+            $build;
+
+          // Parse docker-compose config.
+          list($data,, $exit_status) = $this->exec($input, $output,
+            "cat {$dir}/docker-compose.yml");
+          if ($exit_status) {
+            throw new \Exception('error: ' . $data);
+          }
+          else {
+            $aliases[$build]['docker-compose'] = $yaml->parse($data);
+          }
+
+          // Parse ldev config.
+          list($data,, $exit_status) = $this->exec($input, $output,
+            "cat {$dir}/ldev.yml");
+          if ($exit_status) {
+            throw new \Exception('error: ' . $data);
+          }
+          else {
+            $aliases[$build]['ldev'] = $yaml->parse($data);
+          }
+        }
+
         // Find needed ports.
-        $values = [];
         foreach (explode(', ', $ports) as $port) {
           // 0.0.0.0:32776->22/tcp'.
           if (strpos($port, '->') === FALSE) {
@@ -92,41 +118,25 @@ EOD;
 
             // SSH.
             case '22/tcp':
-              $values['ssh'] = explode(':', $public)[1];
+              $aliases[$build]['ports']['ssh'] = explode(':', $public)[1];
               break;
 
             // HTTP.
             case '80/tcp':
-              $values['http'] = explode(':', $public)[1];
+              $aliases[$build]['ports']['http'] = explode(':', $public)[1];
               break;
 
             // HTTPS.
             case '443/tcp':
-              $values['https'] = explode(':', $public)[1];
+              $aliases[$build]['ports']['https'] = explode(':', $public)[1];
               break;
 
             // MYSQL.
-            case '3306/tcp':
-              $values['mysql'] = explode(':', $public)[1];
+            case $aliases[$build]['ldev']['db']['port']:
+              $aliases[$build]['ports']['db'] = explode(':', $public)[1];
               break;
 
           }
-        }
-
-        // Merge.
-        if (isset($aliases[$build])) {
-          $aliases[$build] += $values;
-        }
-        else {
-          // Parse docker-compose config.
-          $dir = $this->getRootDirectory($input) .
-            '/provision/docker/compose/' .
-            $build;
-          list($compose,,) = $this->exec($input, $output,
-            "cat {$dir}/docker-compose.yml");
-          $yaml = new Parser();
-          $values['docker-compose'] = $yaml->parse($compose);
-          $aliases[$build] = $values;
         }
 
       }
@@ -141,32 +151,35 @@ EOD;
 
     foreach ($aliases as $key => $values) {
 
-      if (empty($values['mysql']) ||
-          empty($values['ssh'])
+      if (empty($values['ports']['db']) ||
+          empty($values['ports']['ssh'])
       ) {
         continue;
       }
 
-      $db_url = 'mysql://root:' .
-        $values['docker-compose']['mysql']['environment']['MYSQL_ROOT_PASSWORD'] .
-        '@' . $hostname . ':' . $values['mysql'] . '/drupal';
+      $db_url = $values['ldev']['db']['driver'] . '://' .
+        $values['ldev']['db']['user'] . ':' .
+        $values['ldev']['db']['password'] . '@' .
+        $hostname . ':' .
+        $values['ports']['db'] . '/drupal';
+
       $alias = [
         'db-url' => $db_url,
         'remote-host' => $hostname,
         'remote-user' => 'root',
-        'ssh-options' => "-A -p " . $values['ssh'] . $ssh_options,
-        'root' => '/var/www',
+        'ssh-options' => "-A -p " . $values['ports']['ssh'] . $ssh_options,
+        'root' => $values['ldev']['nginx']['root'],
         'path-aliases' => [
           '%drush-script' => 'drush-remote',
         ],
       ];
 
-      if (isset($values['http'])) {
-        $alias['uri'] = 'http://' . $hostname . ':' . $values['http'];
+      if (isset($values['ports']['http'])) {
+        $alias['uri'] = 'http://' . $hostname . ':' . $values['ports']['http'];
         $output->writeln($export_alias($key, $alias));
       }
-      if (isset($values['https'])) {
-        $alias['uri'] = 'https://' . $hostname . ':' . $values['https'];
+      if (isset($values['ports']['https'])) {
+        $alias['uri'] = 'https://' . $hostname . ':' . $values['ports']['https'];
         $output->writeln($export_alias($key . '.ssl', $alias));
       }
 
