@@ -24,10 +24,10 @@ class ComposePsCommand extends BaseCommand {
     parent::configure();
     $this
       ->setName('ps')
-      ->setDescription('List the containers for a development environment.')
+      ->setDescription('List running containers.')
       ->addArgument(
           'environment',
-          InputArgument::REQUIRED,
+          InputArgument::OPTIONAL,
           'The directory name containing the docker-compose.yml of the environment to list.'
       );
 
@@ -39,11 +39,16 @@ class ComposePsCommand extends BaseCommand {
   protected function execute(InputInterface $input, OutputInterface $output) {
     parent::execute($input, $output);
 
-    $dir = $this->getRootDirectory($input) .
-      '/provision/docker/compose/' .
-      $input->getArgument('environment');
+    if ($env = $input->getArgument('environment')) {
+      $dir = $this->getRootDirectory($input) .
+        '/provision/docker/compose/' .
+        $input->getArgument('environment');
+      $cmd = "cd {$dir} && docker-compose ps";
+    }
+    else {
+      $cmd = 'docker ps --format=\'table {{.Names}}\t{{.Status}}\t{{.Ports}}\'';
+    }
 
-    $cmd = "cd {$dir} && docker-compose ps";
     $this->exec($input, $output, $cmd, TRUE);
 
   }
