@@ -18,7 +18,6 @@ $conf = Conf::load();
 
 $application->add(new Command\ComposeDestroyCommand($conf));
 $application->add(new Command\ComposeInitCommand());
-$application->add(new Command\ComposeLsCommand($conf));
 $application->add(new Command\ComposePsCommand($conf));
 $application->add(new Command\ComposeStopCommand($conf));
 $application->add(new Command\ComposeUpCommand($conf));
