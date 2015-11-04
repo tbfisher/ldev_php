@@ -105,7 +105,7 @@ abstract class BaseCommand extends Command {
    *   No trailing slash.
    */
   public function getRootDirectory(InputInterface $input) {
-    if ($input->getOption('vagrant')) {
+    if ($input->getOption('vagrant') || $input->getOption('remote')) {
       return '/opt';
     }
     return getcwd();
