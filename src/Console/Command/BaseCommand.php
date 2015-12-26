@@ -199,12 +199,12 @@ abstract class BaseCommand extends Command {
         }
         $this->sshConfig = [];
         foreach (explode("\n", $process->getOutput()) as $line) {
-          if (!preg_match('/^ +([^ ]+) +(.*)$/', $line, $matches) ||
-            empty($matches[2])
+          if (!preg_match('/^ +([^ ]+) +("?)(.*)\2$/', $line, $matches) ||
+            empty($matches[3])
           ) {
             continue;
           }
-          list(, $key, $value) = $matches;
+          list(, $key, , $value) = $matches;
           $this->sshConfig[$key] = rtrim($value);
         }
         // Required.
