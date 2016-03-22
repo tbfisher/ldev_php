@@ -9,7 +9,6 @@ namespace ChapterThree\LocalDev\Console\Command;
 
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Yaml\Parser;
 
 /**
  * Class for `ldev` command.
@@ -44,103 +43,7 @@ EOD;
   protected function execute(InputInterface $input, OutputInterface $output) {
     parent::execute($input, $output);
 
-    $hostname = 'localhost';
-    $this->getRemote($input);
-    if ($input->getOption('vagrant')) {
-      $hostname = 'local.dev';
-    }
-    elseif ($this->sshConfig) {
-      $hostname = $this->sshConfig['HostName'];
-    }
-    $ssh_options = '';
-    foreach ($this->sshConfig as $key => $val) {
-      if (!in_array($key, ['HostName', 'User', 'Port', 'IdentityFile'])) {
-        $ssh_options .= " -o '$key $val'";
-      }
-    }
-
-    // Each alias keyed on name.
-    $aliases = [];
-
-    // Parse `docker ps` output.
-    list($ps,, $exit_status) = $this->exec($input, $output,
-      "docker ps --format='{{.Names}}  {{.Ports}}'");
-    if ($exit_status) {
-      throw new \Exception('`docker ps` error: ' . $ps);
-    }
-    $ps = trim($ps);
-    if (!empty($ps)) {
-      // Each container.
-      foreach (explode("\n", $ps) as $line) {
-
-        // Parse.
-        list($machine, $ports) = preg_split('/\\s+/', $line, 2);
-        list($build, $container, $index) = explode('_', $machine);
-        if ($index > 1) {
-          $build .= '.' . $index;
-        }
-
-        if (!isset($aliases[$build])) {
-          $yaml = new Parser();
-          $dir = $this->getRootDirectory($input) .
-            '/provision/docker/compose/' .
-            $build;
-
-          // Parse docker-compose config.
-          list($data,, $exit_status) = $this->exec($input, $output,
-            "cat {$dir}/docker-compose.yml");
-          if ($exit_status) {
-            throw new \Exception('error: ' . $data);
-          }
-          else {
-            $aliases[$build]['docker-compose'] = $yaml->parse($data);
-          }
-
-          // Parse ldev config.
-          list($data,, $exit_status) = $this->exec($input, $output,
-            "cat {$dir}/ldev.yml");
-          if ($exit_status) {
-            throw new \Exception('error: ' . $data);
-          }
-          else {
-            $aliases[$build]['ldev'] = $yaml->parse($data);
-          }
-        }
-
-        // Find needed ports.
-        foreach (explode(', ', $ports) as $port) {
-          // 0.0.0.0:32776->22/tcp'.
-          if (strpos($port, '->') === FALSE) {
-            continue;
-          }
-          list($public, $private) = explode('->', $port);
-          switch ($private) {
-
-            // SSH.
-            case '22/tcp':
-              $aliases[$build]['ports']['ssh'] = explode(':', $public)[1];
-              break;
-
-            // HTTP.
-            case '80/tcp':
-              $aliases[$build]['ports']['http'] = explode(':', $public)[1];
-              break;
-
-            // HTTPS.
-            case '443/tcp':
-              $aliases[$build]['ports']['https'] = explode(':', $public)[1];
-              break;
-
-            // MYSQL.
-            case $aliases[$build]['ldev']['db']['port']:
-              $aliases[$build]['ports']['db'] = explode(':', $public)[1];
-              break;
-
-          }
-        }
-
-      }
-    }
+    $this->getProjects($input, $output);
 
     $output->writeln(self::HEAD);
 
@@ -149,37 +52,46 @@ EOD;
         var_export($alias, TRUE) . ";\n";
     };
 
-    foreach ($aliases as $key => $values) {
+    foreach ($this->projects as $key => $values) {
 
       if (empty($values['ports']['db']) ||
           empty($values['ports']['ssh'])
       ) {
+        // @todo throw exception.
         continue;
       }
 
+      list($remote_user, $remote_host, $remote_port, $ssh_options,)
+        = $this->getRemoteWeb($input, $output, $key);
+
+      // D7-style db url.
       $db_url = $values['ldev']['db']['driver'] . '://' .
         $values['ldev']['db']['user'] . ':' .
         $values['ldev']['db']['password'] . '@' .
-        $hostname . ':' .
+        $remote_host . ':' .
         $values['ports']['db'] . '/drupal';
 
       $alias = [
         'db-url' => $db_url,
-        'remote-host' => $hostname,
-        'remote-user' => 'root',
-        'ssh-options' => "-A -p " . $values['ports']['ssh'] . $ssh_options,
-        'root' => $values['ldev']['nginx']['root'],
+        'remote-host' => $remote_host,
+        'remote-user' => $remote_user,
+        'ssh-options' => "-A -p " . $remote_port . $ssh_options,
+        'root' => $values['ldev']['web']['root'],
         'path-aliases' => [
           '%drush-script' => 'drush-remote',
         ],
       ];
 
       if (isset($values['ports']['http'])) {
-        $alias['uri'] = 'http://' . $hostname . ':' . $values['ports']['http'];
+        $alias['uri'] = 'http://' .
+          ($input->getOption('vagrant') ? 'local.dev' : $remote_host) .
+          ':' . $values['ports']['http'];
         $output->writeln($export_alias($key, $alias));
       }
       if (isset($values['ports']['https'])) {
-        $alias['uri'] = 'https://' . $hostname . ':' . $values['ports']['https'];
+        $alias['uri'] = 'https://' .
+          ($input->getOption('vagrant') ? 'local.dev' : $remote_host) .
+          ':' . $values['ports']['https'];
         $output->writeln($export_alias($key . '.ssl', $alias));
       }
 

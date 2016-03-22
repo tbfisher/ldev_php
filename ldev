@@ -11,6 +11,9 @@ require __DIR__ . '/vendor/autoload.php';
 use ChapterThree\LocalDev\Conf;
 use ChapterThree\LocalDev\Console\Command;
 use Symfony\Component\Console\Application;
+use phpseclib\Net\SSH2;
+
+define('NET_SSH2_LOGGING', SSH2::LOG_SIMPLE);
 
 $application = new Application('local.dev Tool', Conf::VERSION);
 
@@ -22,4 +25,6 @@ $application->add(new Command\ComposePsCommand($conf));
 $application->add(new Command\ComposeStopCommand($conf));
 $application->add(new Command\ComposeUpCommand($conf));
 $application->add(new Command\DrushAliasesCommand($conf));
+$application->add(new Command\PhpStormConfigureCommand($conf));
+$application->add(new Command\XdebugConfigureCommand($conf));
 $application->run();

@@ -13,7 +13,8 @@
         "symfony/console": "~2.7",
         "symfony/process": "~2.7",
         "phpseclib/phpseclib": "~2.0",
-        "symfony/yaml": "~2.7"
+        "symfony/yaml": "~2.7",
+        "piwik/ini": "^1.0"
     },
     "autoload": {
         "psr-4": {
