@@ -240,6 +240,41 @@ class PhpStormConfigureCommand extends BaseCommand {
         $doc->documentElement->appendChild($element);
       }
       $element->setAttribute('interpreter_name', $interpreter_name);
+      // Drupal.
+      $drupal_version = @$conf['ldev']['phpstorm']['drupal_version'];
+      if (empty($drupal_version)) {
+        $output->writeln("Skipping setting drupal version ${env}: no PhpStorm drupal_version configured in ldev.yml.");
+      }
+      else {
+        $existing = $xpath->query('/project/component[@name="DrupalConfiguration"]');
+        if ($existing->length) {
+          $parent = $existing->item(0);
+        }
+        else {
+          $parent = $doc->createElement('component');
+          $parent->setAttribute('name', 'DrupalConfiguration');
+          $doc->documentElement->appendChild($parent);
+        }
+        $parent->setAttribute('enabled', 'true');
+        $parent->setAttribute('version', $drupal_version);
+        $existing = $xpath->query('drupalPath', $parent);
+        if ($existing->length) {
+          $parent->removeChild($existing->item(0));
+        }
+        $web_root = $conf['ldev']['web']['root'];
+        $drupal_path = '$PROJECT_DIR$';
+        foreach ($conf['docker-compose']['web']['volumes'] as $map) {
+          list(, $dest) = explode(':', $map);
+          if (substr($web_root, 0, strlen($dest)) == $dest) {
+            if (strlen($dest) < strlen($web_root)) {
+              $drupal_path .= substr($web_root, strlen($dest));
+            }
+            break;
+          }
+        }
+        $element = $doc->createElement('drupalPath', $drupal_path);
+        $parent->appendChild($element);
+      }
       // Write.
       $doc->formatOutput = TRUE;
       file_put_contents($file_path, $doc->saveXML());
