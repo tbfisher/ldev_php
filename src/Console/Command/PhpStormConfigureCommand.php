@@ -142,17 +142,19 @@ class PhpStormConfigureCommand extends BaseCommand {
       if (empty($php_language_level)) {
         $output->writeln("Skipping setting php language level ${env}: no PhpStorm language_level configured in ldev.yml.");
       }
-      $existing = $xpath->query('/project/component[@name="PhpProjectSharedConfiguration"]');
-      if ($existing->length) {
-        /** @var \DOMElement $element */
-        $element = $existing->item(0);
-      }
       else {
-        $element = $doc->createElement('component');
-        $element->setAttribute('name', 'PhpProjectSharedConfiguration');
-        $root->appendChild($element);
+        $existing = $xpath->query('/project/component[@name="PhpProjectSharedConfiguration"]');
+        if ($existing->length) {
+          /** @var \DOMElement $element */
+          $element = $existing->item(0);
+        }
+        else {
+          $element = $doc->createElement('component');
+          $element->setAttribute('name', 'PhpProjectSharedConfiguration');
+          $root->appendChild($element);
+        }
+        $element->setAttribute('php_language_level', $php_language_level);
       }
-      $element->setAttribute('php_language_level', $php_language_level);
       // Write.
       $doc->formatOutput = TRUE;
       file_put_contents($file_path, $doc->saveXML());
@@ -208,8 +210,8 @@ class PhpStormConfigureCommand extends BaseCommand {
         $parent = $existing->item(0);
       }
       else {
-        $parent = $doc->createElement('servers');
-        $parent->appendChild($parent);
+        $element = $doc->createElement('servers');
+        $parent = $parent->appendChild($element);
       }
       if (!$server_http) {
         $server_http = $doc->createElement('server');
